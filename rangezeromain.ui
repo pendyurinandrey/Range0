@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>RangeZeroMain</class>
+ <widget class="QMainWindow" name="RangeZeroMain">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>RangeZeroMain</string>
+  </property>
+  <widget class="QWidget" name="centralwidget"/>
+  <widget class="QMenuBar" name="mainmenu">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="nativeMenuBar">
+    <bool>false</bool>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuTraining">
+    <property name="title">
+     <string>Training</string>
+    </property>
+    <addaction name="actionTrainingWizard"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuTraining"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionTrainingWizard">
+   <property name="text">
+    <string>Training wizard</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
