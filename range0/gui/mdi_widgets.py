@@ -45,11 +45,21 @@ class CameraWidget(QWidget):
         layout.addWidget(self.__fps_label)
         self.setLayout(layout)
 
+    @Slot(QPixmap, float)
+    def update_camera_view(self, pixmap: QPixmap, fps: float):
+        current_width = self.__graphics_view.width()
+        current_height = self.__graphics_view.height()
+        scaled_pixmap = pixmap.scaled(current_width, current_height, Qt.KeepAspectRatio, Qt.FastTransformation)
+
+        self.__camera_output.setPixmap(scaled_pixmap)
+        self.__camera_output.setGeometry(0, 0, current_width, current_height)
+        self.__fps_label.setText('Fps: {:.2f}'.format(fps))
+
     # Will be invoked whe widget becomes visible
     def showEvent(self, event: QShowEvent):
         self.__renderer = DefaultRendererBuilder()\
             .from_camera_id(self.__camera_id)\
-            .to_camera_widget(self)\
+            .send_raw_frame_to_qt_slot(self.update_camera_view)\
             .build()
 
         self.__renderer.start_rendering()
@@ -61,13 +71,3 @@ class CameraWidget(QWidget):
             self.__renderer.stop_rendering()
 
         super().hideEvent(event)
-
-    @Slot(QPixmap, float)
-    def update_camera_view(self, pixmap: QPixmap, fps: float):
-        current_width = self.__graphics_view.width()
-        current_height = self.__graphics_view.height()
-        scaled_pixmap = pixmap.scaled(current_width, current_height, Qt.KeepAspectRatio, Qt.FastTransformation)
-
-        self.__camera_output.setPixmap(scaled_pixmap)
-        self.__camera_output.setGeometry(0, 0, current_width, current_height)
-        self.__fps_label.setText('Fps: {:.2f}'.format(fps))
