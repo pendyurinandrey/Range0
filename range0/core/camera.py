@@ -60,9 +60,9 @@ class CameraListener(ABC):
     def get_fps(self):
         return self.__fps
 
-    def offer_frame(self, frame):
+    def offer_frame(self, frame_bgr):
         try:
-            self.__queue.put_nowait(frame)
+            self.__queue.put_nowait(frame_bgr)
         except queue.Full:
             pass
 
@@ -117,14 +117,13 @@ class DefaultCameraWorker(threading.Thread):
         frame_count = 0
         start_time = time.time()
         while (not self.__stop_requested.is_set()) and retry_count < self.__max_retry_count:
-            ret, frame = camera.read()
+            ret, frame_bgr = camera.read()
             # Frame was captured successfully
             if ret:
                 # Reset retry_count if a camera is able to return frames now
                 retry_count = 0
-                rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
                 for listener in self.__listeners.values():
-                    listener.offer_frame(rgb_frame)
+                    listener.offer_frame(frame_bgr)
                 frame_count+=1
                 if frame_count > 100:
                     fps = frame_count / (time.time() - start_time)

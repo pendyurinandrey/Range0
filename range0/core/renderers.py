@@ -19,8 +19,10 @@ from typing import Any, Callable
 from abc import ABC, abstractmethod
 from PySide2.QtGui import QImage, QPixmap
 from PySide2.QtCore import QObject, Signal
-from range0.core.camera import AbstractCamera, get_camera_by_id, CameraListener
 from dataclasses import dataclass
+import cv2.cv2 as cv
+
+from range0.core.camera import AbstractCamera, get_camera_by_id, CameraListener
 
 
 @dataclass(frozen=True)
@@ -31,21 +33,22 @@ class Frame:
 
 class AbstractRenderingStrategy(ABC):
     @abstractmethod
-    def render(self, frame: Frame):
+    def render(self, frame_bgr: Frame):
         pass
 
 
-class QtSlotRenderingStrategy(QObject):
+class ToQtSlotRenderingStrategy(QObject):
     next_frame = Signal(QPixmap, float)
 
     def __init__(self, slot: Callable[[QPixmap, float], None], parent: QObject = None):
         super().__init__(parent)
         self.next_frame.connect(slot)
 
-    def render(self, frame: Frame):
-        height, width, val = frame.cv_image.shape
-        pixmap = QPixmap.fromImage(QImage(frame.cv_image.data, width, height, QImage.Format_RGB888))
-        self.next_frame.emit(pixmap, frame.fps)
+    def render(self, frame_bgr: Frame):
+        rgb_frame = cv.cvtColor(frame_bgr.cv_image, cv.COLOR_BGR2RGB)
+        height, width, val = rgb_frame.shape
+        pixmap = QPixmap.fromImage(QImage(rgb_frame.data, width, height, QImage.Format_RGB888))
+        self.next_frame.emit(pixmap, frame_bgr.fps)
 
 
 class AbstractRenderer(ABC):
@@ -89,9 +92,9 @@ class AsyncRendererWorker(threading.Thread):
         listener = CameraListener()
         self.__camera.add_camera_listener(listener)
         while not self.__stop_requested.is_set():
-            frame = listener.get_frame(timeout_sec=10)
+            frame_bgr = listener.get_frame(timeout_sec=10)
             fps = listener.get_fps()
-            self.__strategy.render(Frame(frame, fps))
+            self.__strategy.render(Frame(frame_bgr, fps))
 
         self.__camera.remove_camera_listener(listener)
 
@@ -114,7 +117,7 @@ class WithCameraRendererBuilder:
         self.__camera_id = camera_id
 
     def send_raw_frame_to_qt_slot(self, slot_func: Callable[[QPixmap, float], None]):
-        return WithCameraAndStrategyRendererBuilder(self.__camera_id, QtSlotRenderingStrategy(slot_func))
+        return WithCameraAndStrategyRendererBuilder(self.__camera_id, ToQtSlotRenderingStrategy(slot_func))
 
 
 class DefaultRendererBuilder:
