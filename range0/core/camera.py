@@ -38,7 +38,8 @@ def get_available_camera_info() -> List[CameraInfo]:
 
     info = []
     for i in range(0, len(cameras)):
-        c = CameraInfo(id=str(i), device_name=cameras[i].deviceName(), description=cameras[i].description())
+        c = CameraInfo(id=str(i), device_name=cameras[i].deviceName(),
+                       description=cameras[i].description())
         info.append(c)
 
     return info
@@ -124,7 +125,7 @@ class DefaultCameraWorker(threading.Thread):
                 retry_count = 0
                 for listener in self.__listeners.values():
                     listener.offer_frame(frame_bgr)
-                frame_count+=1
+                frame_count += 1
                 if frame_count > 100:
                     fps = frame_count / (time.time() - start_time)
                     for listener in self.__listeners.values():
@@ -143,19 +144,17 @@ class DefaultCamera(AbstractCamera):
     __worker = None
     __thread_name_pattern = 'camera-worker-{}'
 
-    def __init__(self, camera_id):
-        super().__init__(camera_id)
-
     def _on_listener_added(self):
         if not self.__is_running:
-            self.__worker = DefaultCameraWorker(thread_name=self.__thread_name_pattern.format(self._camera_id),
-                                                camera_index=int(self._camera_id),  # TODO: fix me
-                                                listeners=self._listeners)
+            self.__worker = DefaultCameraWorker(
+                thread_name=self.__thread_name_pattern.format(self._camera_id),
+                camera_index=int(self._camera_id),  # No we support only wired cameras
+                listeners=self._listeners)
             self.__worker.start()
             self.__is_running = True
 
     def _on_all_listeners_removed(self):
-        if not (self.__worker is None):
+        if self.__worker is not None:
             self.__worker.stop()
         self.__is_running = False
 

@@ -46,7 +46,7 @@ class ToQtSlotRenderingStrategy(QObject):
 
     def render(self, frame_bgr: Frame):
         rgb_frame = cv.cvtColor(frame_bgr.cv_image, cv.COLOR_BGR2RGB)
-        height, width, val = rgb_frame.shape
+        height, width, _ = rgb_frame.shape
         pixmap = QPixmap.fromImage(QImage(rgb_frame.data, width, height, QImage.Format_RGB888))
         self.next_frame.emit(pixmap, frame_bgr.fps)
 
