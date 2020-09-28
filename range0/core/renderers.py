@@ -82,7 +82,8 @@ class AsyncRenderer(AbstractRenderer):
 
 
 class AsyncRendererWorker(threading.Thread):
-    def __init__(self, thread_name: str, camera: AbstractCamera, strategy: AbstractRenderingStrategy):
+    def __init__(self, thread_name: str, camera: AbstractCamera,
+                 strategy: AbstractRenderingStrategy):
         super().__init__(name=thread_name)
         self.__strategy = strategy
         self.__camera = camera
@@ -117,7 +118,8 @@ class WithCameraRendererBuilder:
         self.__camera_id = camera_id
 
     def send_raw_frame_to_qt_slot(self, slot_func: Callable[[QPixmap, float], None]):
-        return WithCameraAndStrategyRendererBuilder(self.__camera_id, ToQtSlotRenderingStrategy(slot_func))
+        return WithCameraAndStrategyRendererBuilder(self.__camera_id,
+                                                    ToQtSlotRenderingStrategy(slot_func))
 
 
 class DefaultRendererBuilder:
