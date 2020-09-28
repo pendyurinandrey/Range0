@@ -15,8 +15,8 @@
 #   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
-from range0.gui.main_window import MainWindow
 from PySide2.QtWidgets import QApplication
+from range0.gui.main_window import MainWindow
 
 
 if __name__ == "__main__":

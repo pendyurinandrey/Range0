@@ -65,7 +65,7 @@ class DetectionStrategyQtAdapter(QObject):
         self.detection_result.connect(slot)
 
     def detect(self, frame_bgr):
-        if not (self.__target_strategy is None):
+        if self.__target_strategy is not None:
             self.detection_result.emit(self.__target_strategy.detect(frame_bgr))
 
 

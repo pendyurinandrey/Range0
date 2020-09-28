@@ -16,7 +16,7 @@
 
 import sys
 from typing import Dict
-from PySide2.QtWidgets import QMainWindow, QWidget, QAction, QMdiArea, QDialog, QRadioButton, \
+from PySide2.QtWidgets import QMainWindow, QAction, QMdiArea, QDialog, QRadioButton, \
     QButtonGroup, QVBoxLayout, QPushButton, QMessageBox, QMdiSubWindow
 from PySide2.QtCore import Qt
 

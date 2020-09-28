@@ -14,9 +14,9 @@
 #   You should have received a copy of the GNU General Public License
 #   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from typing import List, Dict, TypeVar, Callable, Optional
+from typing import List, Dict, Optional
 from functools import lru_cache
-from abc import ABC, abstractmethod
+from abc import ABC
 from dataclasses import dataclass
 from PySide2.QtMultimedia import QCameraInfo
 from cv2 import cv2 as cv
