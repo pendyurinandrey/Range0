@@ -25,7 +25,6 @@ from range0.gui import mdi_widgets
 
 
 class MainWindow(QMainWindow):
-
     __mdi_area = None
 
     def __init__(self):
@@ -61,6 +60,7 @@ class MainWindow(QMainWindow):
             camera_window = QMdiSubWindow()
             camera_window.setWidget(camera_widget)
             camera_window.setAttribute(Qt.WA_DeleteOnClose)
+            camera_window.resize(self.width() * 0.8, self.height() * 0.8)
             self.__mdi_area.addSubWindow(camera_window)
             camera_window.show()
 
@@ -91,7 +91,8 @@ class ChooseCameraDialog(QDialog):
         self.__cameras_button_group = QButtonGroup()
         self.__cameras_button_group.setExclusive(True)
 
-        self.__cameras_button_group.buttonClicked.connect(lambda b: self.__choose_button.setEnabled(True))
+        self.__cameras_button_group.buttonClicked.connect(
+            lambda b: self.__choose_button.setEnabled(True))
 
         camera_info = camera.get_available_camera_info()
 

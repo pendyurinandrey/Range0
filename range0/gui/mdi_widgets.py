@@ -41,6 +41,9 @@ class CameraWidget(QWidget):
         self.__camera_output = QLabel()
         self.__graphics_scene.addWidget(self.__camera_output)
         self.__fps_label = QLabel()
+        self.__graphics_view.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        self.__graphics_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.__graphics_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         layout = QVBoxLayout()
         layout.addWidget(self.__graphics_view)
         layout.addWidget(self.__fps_label)
@@ -60,7 +63,8 @@ class CameraWidget(QWidget):
         scaled_pixmap = pixmap.scaled(current_width, current_height, Qt.KeepAspectRatio,
                                       Qt.FastTransformation)
         self.__camera_output.setPixmap(scaled_pixmap)
-        self.__camera_output.setGeometry(0, 0, current_width, current_height)
+        self.__camera_output.setGeometry(0, 0, scaled_pixmap.width(), scaled_pixmap.height())
+        self.__graphics_scene.setSceneRect(0, 0, scaled_pixmap.width(), scaled_pixmap.height())
         if width != 0:
             self.render_shots(result.points, scaled_pixmap.width() / width)
         else:
