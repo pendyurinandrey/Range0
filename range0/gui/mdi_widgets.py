@@ -61,7 +61,6 @@ class CameraWidget(QWidget):
                                       Qt.FastTransformation)
         self.__camera_output.setPixmap(scaled_pixmap)
         self.__camera_output.setGeometry(0, 0, current_width, current_height)
-        # TODO: fix rescaling for shots
         if width != 0:
             self.render_shots(result.points, scaled_pixmap.width() / width)
         else:

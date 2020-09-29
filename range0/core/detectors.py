@@ -14,7 +14,7 @@
 #   You should have received a copy of the GNU General Public License
 #   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from typing import List, Any, Optional
+from typing import List, Optional
 from dataclasses import dataclass
 from datetime import datetime
 from abc import ABC, abstractmethod
