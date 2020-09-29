@@ -4,5 +4,4 @@ python:
 install:
   - pip install -r requirements.txt
 script:
-  - pylint range0 || travis_terminate 1;
-  - pytest
+  - sh test.sh

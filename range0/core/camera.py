@@ -45,27 +45,12 @@ def get_available_camera_info() -> List[CameraInfo]:
     return info
 
 
-class CameraListener(ABC):
+class CameraFpsListener:
     __id: str = None
     __fps: float = 0
 
-    def __init__(self, queue_size=100):
-        self.__queue = queue.Queue(queue_size)
-
-    def get_frame(self, blocking=True, timeout_sec: int = None) -> Optional:
-        try:
-            return self.__queue.get(blocking, timeout_sec)
-        except queue.Empty:
-            return None
-
     def get_fps(self):
         return self.__fps
-
-    def offer_frame(self, frame_bgr):
-        try:
-            self.__queue.put_nowait(frame_bgr)
-        except queue.Full:
-            pass
 
     def set_fps(self, fps: float):
         self.__fps = fps
@@ -76,8 +61,33 @@ class CameraListener(ABC):
         return self.__id
 
 
+class CameraFrameListener:
+    __id: str = None
+
+    def __init__(self, queue_size=100):
+        self.__queue = queue.Queue(queue_size)
+
+    def get_frame(self, blocking=True, timeout_sec: int = None) -> Optional:
+        try:
+            return self.__queue.get(blocking, timeout_sec)
+        except queue.Empty:
+            return None
+
+    def offer_frame(self, frame_bgr):
+        try:
+            self.__queue.put_nowait(frame_bgr)
+        except queue.Full:
+            pass
+
+    def get_id(self) -> str:
+        if self.__id is None:
+            self.__id = str(uuid.uuid4())
+        return self.__id
+
+
 class AbstractCamera(ABC):
-    _listeners: Dict[str, CameraListener] = {}
+    _frame_listeners: Dict[str, CameraFrameListener] = {}
+    _fps_listeners: Dict[str, CameraFpsListener] = {}
 
     def __init__(self, camera_id: str):
         self._camera_id = camera_id
@@ -85,30 +95,40 @@ class AbstractCamera(ABC):
     def get_camera_id(self):
         return self._camera_id
 
-    def add_camera_listener(self, listener: CameraListener) -> None:
-        self._listeners[listener.get_id()] = listener
-        self._on_listener_added()
+    def add_frame_listener(self, listener: CameraFrameListener) -> None:
+        self._frame_listeners[listener.get_id()] = listener
+        self._on_frame_listener_added()
 
-    def _on_listener_added(self):
+    def add_fps_listener(self, listener: CameraFpsListener) -> None:
+        self._fps_listeners[listener.get_id()] = listener
+
+    def _on_frame_listener_added(self):
         pass
 
-    def remove_camera_listener(self, listener: CameraListener) -> None:
-        if listener.get_id() in self._listeners.keys():
-            self._listeners.pop(listener.get_id(), None)
+    def remove_frame_listener(self, listener: CameraFrameListener) -> None:
+        if listener.get_id() in self._frame_listeners.keys():
+            self._frame_listeners.pop(listener.get_id(), None)
 
-        if not self._listeners:
-            self._on_all_listeners_removed()
+        if not self._frame_listeners:
+            self._on_all_frame_listeners_removed()
 
-    def _on_all_listeners_removed(self):
+    def remove_fps_listener(self, listener: CameraFpsListener) -> None:
+        if listener.get_id() in self._fps_listeners.keys():
+            self._fps_listeners.pop(listener.get_id(), None)
+
+    def _on_all_frame_listeners_removed(self):
         pass
 
 
 class DefaultCameraWorker(threading.Thread):
     __max_retry_count = 30
 
-    def __init__(self, thread_name: str, camera_index: int, listeners: Dict[str, CameraListener]):
+    def __init__(self, thread_name: str, camera_index: int,
+                 frame_listeners: Dict[str, CameraFrameListener],
+                 fps_listeners: Dict[str, CameraFpsListener]):
         super().__init__(name=thread_name)
-        self.__listeners = listeners
+        self.__fps_listeners = fps_listeners
+        self.__frame_listeners = frame_listeners
         self.__camera_index = camera_index
         self.__stop_requested = threading.Event()
 
@@ -123,12 +143,12 @@ class DefaultCameraWorker(threading.Thread):
             if ret:
                 # Reset retry_count if a camera is able to return frames now
                 retry_count = 0
-                for listener in self.__listeners.values():
+                for listener in self.__frame_listeners.values():
                     listener.offer_frame(frame_bgr)
                 frame_count += 1
                 if frame_count > 100:
                     fps = frame_count / (time.time() - start_time)
-                    for listener in self.__listeners.values():
+                    for listener in self.__fps_listeners.values():
                         listener.set_fps(fps)
                     frame_count = 0
                     start_time = time.time()
@@ -144,16 +164,18 @@ class DefaultCamera(AbstractCamera):
     __worker = None
     __thread_name_pattern = 'camera-worker-{}'
 
-    def _on_listener_added(self):
+    def _on_frame_listener_added(self):
         if not self.__is_running:
             self.__worker = DefaultCameraWorker(
                 thread_name=self.__thread_name_pattern.format(self._camera_id),
-                camera_index=int(self._camera_id),  # No we support only wired cameras
-                listeners=self._listeners)
+                camera_index=int(self._camera_id),  # Now we support only wired cameras
+                frame_listeners=self._frame_listeners,
+                fps_listeners=self._fps_listeners)
+            self.__worker.daemon = True
             self.__worker.start()
             self.__is_running = True
 
-    def _on_all_listeners_removed(self):
+    def _on_all_frame_listeners_removed(self):
         if self.__worker is not None:
             self.__worker.stop()
         self.__is_running = False

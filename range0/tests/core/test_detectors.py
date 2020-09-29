@@ -17,7 +17,7 @@
 import pytest
 import cv2.cv2 as cv
 
-from range0.core.detectors import SimpleDetectionStrategy
+from range0.core.detectors import SimpleShotDetectionStrategy
 
 debug_enabled = False
 
@@ -26,7 +26,7 @@ debug_enabled = False
 def test_simple_detector_strategy(datadir):
     file = '{}/simple_red_dot.jpg'.format(datadir)
     frame = cv.imread(file)
-    strategy = SimpleDetectionStrategy()
+    strategy = SimpleShotDetectionStrategy()
     result = strategy.detect(frame)
     if debug_enabled:
         for point in result.points:

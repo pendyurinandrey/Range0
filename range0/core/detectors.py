@@ -14,12 +14,15 @@
 #   You should have received a copy of the GNU General Public License
 #   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from typing import List, Callable
+from typing import List, Any, Optional
 from dataclasses import dataclass
+from datetime import datetime
 from abc import ABC, abstractmethod
-from PySide2.QtCore import QObject, Signal
 import cv2.cv2 as cv
 import numpy as np
+import threading
+
+from range0.core.camera import AbstractCamera, CameraFrameListener
 
 
 @dataclass(frozen=True)
@@ -31,16 +34,24 @@ class Point:
 @dataclass(frozen=True)
 class DetectionResult:
     points: List[Point]
+    detection_time: datetime
+    frame_bgr: np.ndarray
 
 
-class AbstractDetectionStrategy(ABC):
+class AbstractDetectionResultSender(ABC):
+    @abstractmethod
+    def send(self, result: DetectionResult):
+        pass
+
+
+class AbstractShotDetectionStrategy(ABC):
 
     @abstractmethod
     def detect(self, frame_bgr) -> DetectionResult:
         pass
 
 
-class SimpleDetectionStrategy(AbstractDetectionStrategy):
+class SimpleShotDetectionStrategy(AbstractShotDetectionStrategy):
 
     def detect(self, frame_bgr) -> DetectionResult:
         frame_hsv = cv.cvtColor(frame_bgr, cv.COLOR_BGR2HSV)
@@ -48,28 +59,43 @@ class SimpleDetectionStrategy(AbstractDetectionStrategy):
         upper_red = np.array([255, 255, 255])
         mask = cv.inRange(frame_hsv, lower_red, upper_red)
         moments = cv.moments(mask)
-        x = int(moments['m10'] / moments['m00'])
-        y = int(moments['m01'] / moments['m00'])
-        point = Point(x, y)
-        return DetectionResult([point])
+        m00 = moments['m00']
+        result = []
+        if m00 != 0:
+            x = int(moments['m10'] / moments['m00'])
+            y = int(moments['m01'] / moments['m00'])
+            point = Point(x, y)
+            result.append(point)
+        return DetectionResult(result, datetime.now(), frame_bgr)
 
 
-class DetectionStrategyQtAdapter(QObject):
-    detection_result = Signal(DetectionResult)
+class DetectionWorker(threading.Thread):
+    def __init__(self, thread_name: str, camera: AbstractCamera,
+                 detection_strategy: AbstractShotDetectionStrategy,
+                 detection_result_sender: AbstractDetectionResultSender):
+        super(DetectionWorker, self).__init__(name=thread_name)
+        self.__detection_result_sender = detection_result_sender
+        self.__camera = camera
+        self.__detection_strategy = detection_strategy
+        self.__stop_requested = threading.Event()
 
-    def __init__(self, target_strategy: AbstractDetectionStrategy,
-                 slot: Callable[[DetectionResult], None],
-                 parent: QObject = None):
-        super().__init__(parent)
-        self.__target_strategy = target_strategy
-        self.detection_result.connect(slot)
+    def run(self) -> None:
+        listener = CameraFrameListener()
+        self.__camera.add_frame_listener(listener)
+        try:
+            while not self.__stop_requested.is_set():
+                frame_bgr = listener.get_frame(timeout_sec=1)
+                if frame_bgr is not None:
+                    result = self.__detection_strategy.detect(frame_bgr)
+                    self.__detection_result_sender.send(result)
+        finally:
+            self.__camera.remove_frame_listener(listener)
 
-    def detect(self, frame_bgr):
-        if self.__target_strategy is not None:
-            self.detection_result.emit(self.__target_strategy.detect(frame_bgr))
+    def stop(self):
+        self.__stop_requested.set()
 
 
-class AbstractDetector(ABC):
+class AbstractShotDetector(ABC):
 
     @abstractmethod
     def start_detection(self) -> None:
@@ -80,9 +106,28 @@ class AbstractDetector(ABC):
         pass
 
 
-class AsyncDetector(AbstractDetector):
+class AsyncShotDetector(AbstractShotDetector):
+    __thread_name_pattern = 'detector-worker-{}'
+    __is_running = False
+    __worker: Optional[DetectionWorker] = None
+
+    def __init__(self, camera: AbstractCamera,
+                 detection_strategy: AbstractShotDetectionStrategy,
+                 detection_result_sender: AbstractDetectionResultSender):
+        self.__detection_result_sender = detection_result_sender
+        self.__camera = camera
+        self.__detection_strategy = detection_strategy
+
     def start_detection(self) -> None:
-        pass
+        if not self.__is_running:
+            self.__worker = DetectionWorker(thread_name=self.__thread_name_pattern,
+                                            camera=self.__camera,
+                                            detection_strategy=self.__detection_strategy,
+                                            detection_result_sender=self.__detection_result_sender)
+            self.__worker.daemon = True
+            self.__worker.start()
 
     def stop_detection(self) -> None:
-        pass
+        if self.__worker is not None:
+            self.__worker.stop()
+            self.__worker = None
