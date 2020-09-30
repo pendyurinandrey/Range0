@@ -54,19 +54,30 @@ class AbstractShotDetectionStrategy(ABC):
 class SimpleShotDetectionStrategy(AbstractShotDetectionStrategy):
 
     def detect(self, frame_bgr) -> DetectionResult:
-        frame_hsv = cv.cvtColor(frame_bgr, cv.COLOR_BGR2HSV)
-        lower_red = np.array([0, 0, 255])
-        upper_red = np.array([255, 255, 255])
+        frame_inv = cv.bitwise_not(frame_bgr)
+        frame_hsv = cv.cvtColor(frame_inv, cv.COLOR_BGR2HSV)
+
+        lower_red = np.array([80, 70, 50])
+        upper_red = np.array([100, 255, 255])
         mask = cv.inRange(frame_hsv, lower_red, upper_red)
-        moments = cv.moments(mask)
-        m00 = moments['m00']
-        result = []
-        if m00 != 0:
-            x = int(moments['m10'] / moments['m00'])
-            y = int(moments['m01'] / moments['m00'])
-            point = Point(x, y)
-            result.append(point)
-        return DetectionResult(result, datetime.now(), frame_bgr)
+        #cv.imwrite('mask.jpg', mask)
+        smoothed = cv.GaussianBlur(mask, (7, 7), sigmaX=1.5, sigmaY=1.5)
+        #cv.imwrite('smoothed_mask.jpg', smoothed)
+        detected_circles: np.ndarray = cv.HoughCircles(image=smoothed,
+                                                       method=cv.HOUGH_GRADIENT_ALT,
+                                                       dp=1.5,
+                                                       minDist=10,
+                                                       param1=300,
+                                                       param2=0.9,
+                                                       minRadius=2,
+                                                       maxRadius=50)
+        det_result = []
+        if detected_circles is not None:
+            circles = np.round(detected_circles[0, :]).astype("int")
+            for (x, y, _) in circles:
+                det_result.append(Point(x, y))
+
+        return DetectionResult(det_result, datetime.now(), frame_bgr)
 
 
 class DetectionWorker(threading.Thread):
