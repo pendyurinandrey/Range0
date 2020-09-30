@@ -35,8 +35,8 @@ def test_simple_detector_strategy(datadir):
         cv.imwrite('test_simple_detector_strategy_output.jpg', frame)
 
     assert len(result.points) == 1
-    assert result.points[0].x == 894
-    assert result.points[0].y == 1601
+    assert 894 == pytest.approx(result.points[0].x, 6)
+    assert 1601 == pytest.approx(result.points[0].y, 6)
 
 
 def __draw_circle(img, x_center: float, y_center: float):

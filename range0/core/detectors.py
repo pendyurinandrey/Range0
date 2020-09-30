@@ -54,6 +54,7 @@ class AbstractShotDetectionStrategy(ABC):
 class SimpleShotDetectionStrategy(AbstractShotDetectionStrategy):
 
     def detect(self, frame_bgr) -> DetectionResult:
+        detection_time = datetime.now()
         frame_inv = cv.bitwise_not(frame_bgr)
         frame_hsv = cv.cvtColor(frame_inv, cv.COLOR_BGR2HSV)
 
@@ -77,7 +78,7 @@ class SimpleShotDetectionStrategy(AbstractShotDetectionStrategy):
             for (x, y, _) in circles:
                 det_result.append(Point(x, y))
 
-        return DetectionResult(det_result, datetime.now(), frame_bgr)
+        return DetectionResult(det_result, detection_time, frame_bgr)
 
 
 class DetectionWorker(threading.Thread):
