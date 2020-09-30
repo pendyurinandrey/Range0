@@ -69,7 +69,7 @@ class SimpleShotDetectionStrategy(AbstractShotDetectionStrategy):
                                                        dp=1.5,
                                                        minDist=10,
                                                        param1=300,
-                                                       param2=0.9,
+                                                       param2=0.89,
                                                        minRadius=2,
                                                        maxRadius=50)
         det_result = []
